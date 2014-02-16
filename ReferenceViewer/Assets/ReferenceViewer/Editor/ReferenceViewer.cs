@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Linq;
+using Object = UnityEngine.Object;
 
 namespace ReferenceViewer
 {
@@ -11,7 +13,7 @@ namespace ReferenceViewer
 
         private List<Item> hitItems = new List<Item>();
         private Vector2 pos = Vector2.zero;
-
+        private int selectedFilter = 0;
         [MenuItem("Window/ReferenceViewer")]
         private static void Open()
         {
@@ -32,6 +34,7 @@ namespace ReferenceViewer
             var items = (Selection.objects.Select(obj => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj)))
                 .Select(guid => new
                 {
+                    type = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), typeof(Object)).GetType(),
                     searched = GetGUIContent(guid),
                     referenced =
                         data.assetData.Where(assetData => assetData.reference.Contains(guid))
@@ -41,23 +44,24 @@ namespace ReferenceViewer
                             .ToList(),
                     reference =
                         data.assetData.Find(item => item.guid == guid)
-                                .reference.Select(g => GetGUIContent(g))
-                                .Where(c => c.image)
-                                .OrderBy(c => c.image.name)
-                                .ToList()
+                            .reference.Select(g => GetGUIContent(g))
+                            .Where(c => c.image)
+                            .OrderBy(c => c.image.name)
+                            .ToList()
                 })
                 .Where(item => (item.referenced.Count != 0 || item.reference.Count != 0) && item.searched.image)
                 .OrderBy(item => item.searched.image.name)
                 .Select(item => new Item
                 {
+                    type = item.type,
                     searchedGUIContent = item.searched,
                     referencedGUIContents = item.referenced,
                     referenceGUIContents = item.reference
-                })).ToList();
-
+                }))
+                .Distinct(new CompareSelector<Item, string>(i => i.searchedGUIContent.tooltip))
+                .ToList();
             GetWindow<ReferenceViewer>().Results(items);
         }
-
         private void Results(List<Item> items)
         {
             hitItems = items;
@@ -65,6 +69,7 @@ namespace ReferenceViewer
 
         private void OnGUI()
         {
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Create Json", EditorStyles.toolbarButton))
             {
                 JsonCreator.Build();
@@ -73,16 +78,38 @@ namespace ReferenceViewer
 
             if (hitItems.Count == 0)
             {
+                EditorGUILayout.EndHorizontal();
                 EditorGUILayout.LabelField("Not Found");
             }
             else
             {
+                EditorGUI.BeginChangeCheck();
+                var types = hitItems.Select(item => item.type).ToArray();
+                var display = types.Select(t => t.Name).ToArray();
+                for (int i = 0; i < display.Length; i++)
+                {
+                    if (display[i] == "Object")
+                    {
+                        display[i] = "Scene";
+                    }
+                }
+                ArrayUtility.Insert(ref display, 0, "All");
+                var selected = EditorGUILayout.Popup(selectedFilter, display, EditorStyles.toolbarPopup);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    selectedFilter = selected;
+                }
+                EditorGUILayout.EndHorizontal();
                 pos = EditorGUILayout.BeginScrollView(pos);
 
                 foreach (var hitItem in hitItems)
                 {
+                    if (selectedFilter != 0 && hitItem.type != types[selectedFilter - 1])
+                    {
+                        continue;
+                    }
 
-                    EditorGUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width * 0.98f));
+                    EditorGUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width * 0.96f));
                     DrawGUIContents(hitItem.referenceGUIContents);
                     var iconSize = EditorGUIUtility.GetIconSize();
                     EditorGUIUtility.SetIconSize(Vector2.one * 32);
@@ -117,11 +144,7 @@ namespace ReferenceViewer
             else
             {
                 GUILayout.Space(Screen.width * 0.3f + 16);
-                //                GUILayout.Box("", GUILayout.Width(Screen.width * 0.3f), GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
             }
-
-
-
         }
         private static void PingObjectIfOnMouseDown(string path)
         {
@@ -159,8 +182,28 @@ namespace ReferenceViewer
             return content;
         }
 
+        private class CompareSelector<T, TKey> : IEqualityComparer<T>
+        {
+            private Func<T, TKey> selector;
+
+            public CompareSelector(Func<T, TKey> selector)
+            {
+                this.selector = selector;
+            }
+
+            public bool Equals(T x, T y)
+            {
+                return selector(x).Equals(selector(y));
+            }
+
+            public int GetHashCode(T obj)
+            {
+                return selector(obj).GetHashCode();
+            }
+        }
         private class Item
         {
+            public Type type;
             public GUIContent searchedGUIContent;
             public List<GUIContent> referencedGUIContents = new List<GUIContent>();
             public List<GUIContent> referenceGUIContents = new List<GUIContent>();
