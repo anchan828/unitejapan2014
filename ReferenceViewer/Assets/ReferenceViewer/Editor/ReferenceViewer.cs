@@ -13,7 +13,7 @@ namespace ReferenceViewer
 
         private List<Item> items = new List<Item>();
         private Vector2 pos = Vector2.zero;
-        private int selectedFilter = 0;
+        private int selectedFilter;
 
         static Dictionary<string, List<GUIContent>> sceneReference = new Dictionary<string, List<GUIContent>>();
 
@@ -35,9 +35,15 @@ namespace ReferenceViewer
         private static void Find()
         {
             sceneReference.Clear();
+            var jsonPath = "build/ReferenceViewer/data.json";
 
+            if (!File.Exists(jsonPath))
+            {
+                Debug.LogException(new NullReferenceException(jsonPath));
+                return;
+            }
 
-            var text = File.ReadAllText("build/ReferenceViewer/data.json");
+            var text = File.ReadAllText(jsonPath);
             var data = LitJson.JsonMapper.ToObject<Data>(text);
             var guids = Selection.objects.Select(obj => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj))).ToArray();
             var items = guids
@@ -53,7 +59,8 @@ namespace ReferenceViewer
                             .ToList(),
                     reference =
                         data.assetData.Find(item => item.guid == guid)
-                            .reference.Where(g => g != guid).Select(g => GetGUIContent(g))
+                            .reference.Where(g => g != guid)
+                            .Select(g => GetGUIContent(g))
                             .Where(c => c.image)
                             .OrderBy(c => c.image.name)
                             .ToList()

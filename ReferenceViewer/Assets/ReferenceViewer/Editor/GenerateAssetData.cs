@@ -177,7 +177,7 @@ namespace ReferenceViewer
 
             if (value as MonoBehaviour)
             {
-               
+
                 value = MonoScript.FromMonoBehaviour(value as MonoBehaviour);
 
                 if (isScene)
@@ -198,21 +198,10 @@ namespace ReferenceViewer
             else if (isScene && PrefabUtility.GetPrefabType(value) == PrefabType.PrefabInstance)
             {
                 var name = "";
-                GameObject gameObject = null;
-                if (component as Component)
-                {
-                    gameObject = (component as Component).gameObject;
-                }
-                
-                if (!gameObject && value as GameObject)
-                {
-                    gameObject = value as GameObject;
-                }
+                var gameObject = GetGameObject(component, value);
 
                 if (gameObject)
-                {
                     name = GetName(PrefabUtility.FindPrefabRoot(gameObject).transform);
-                }
 
                 value = PrefabUtility.GetPrefabParent(value);
                 if (string.IsNullOrEmpty(name))
@@ -245,17 +234,7 @@ namespace ReferenceViewer
             if (!string.IsNullOrEmpty(_path))
             {
                 var name = value.name;
-                GameObject gameObject = null;
-
-                if (component as Component)
-                {
-                    gameObject = (component as Component).gameObject;
-                }
-
-                if (!gameObject && value as GameObject)
-                {
-                    gameObject = value as GameObject;
-                }
+                var gameObject = GetGameObject(component, value);
 
                 if (gameObject)
                     name = GetName(gameObject.transform);
@@ -267,6 +246,22 @@ namespace ReferenceViewer
                     guid = AssetDatabase.AssetPathToGUID(_path)
                 });
             }
+        }
+
+        private static GameObject GetGameObject(Object component, Object gameObject)
+        {
+            GameObject _gameObject = null;
+
+            if (component as Component)
+            {
+                _gameObject = (component as Component).gameObject;
+            }
+
+            if (!gameObject && gameObject as GameObject)
+            {
+                _gameObject = gameObject as GameObject;
+            }
+            return _gameObject;
         }
 
         private static string GetName(Transform transform, string name = "")
