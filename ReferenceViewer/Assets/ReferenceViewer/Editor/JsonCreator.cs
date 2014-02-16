@@ -29,8 +29,20 @@ namespace ReferenceViewer
             const string directory = "build/ReferenceViewer";
 
             Directory.CreateDirectory(directory);
+
             var sb = new StringBuilder();
-            var writer = new LitJson.JsonWriter(sb) { PrettyPrint = true };
+
+            var writer = new LitJson.JsonWriter(sb);
+
+            for (int i = 0; i < data.assetData.Count; i++)
+            {
+                var assetData = data.assetData[i];
+                if (assetData.sceneData.Count != 0)
+                    assetData.sceneData =
+                        assetData.sceneData.Distinct(new CompareSelector<SceneData, string>(s => s.name + s.guid)).ToList();
+            }
+            sb = new StringBuilder();
+            writer = new LitJson.JsonWriter(sb) { PrettyPrint = true };
             LitJson.JsonMapper.ToJson(data, writer);
 
             File.WriteAllText(directory + "/data.json", sb.ToString());

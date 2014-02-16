@@ -67,7 +67,7 @@ namespace ReferenceViewer
                             {
                                 var motion = layer.stateMachine.GetState(k).GetMotion();
                                 if (motion)
-                                    AddAttachedAsset(motion, assetData, false);
+                                    AddAttachedAsset(animator, motion, assetData, false);
                             }
                         }
                         break;
@@ -91,7 +91,7 @@ namespace ReferenceViewer
         {
             foreach (var obj in go.GetComponentsInChildren<Component>().Where(obj => obj))
             {
-                AddAttachedAsset(obj, assetData, isScene);
+                AddAttachedAsset(obj, obj, assetData, isScene);
 
                 SearchFieldAndProperty(obj, assetData, isScene);
             }
@@ -114,7 +114,7 @@ namespace ReferenceViewer
 
             foreach (var value in fields.Select(info => info.GetValue(obj) as Object).Where(o => o != null))
             {
-                AddAttachedAssets(value, assetData, isScene);
+                AddAttachedAssets(obj, value, assetData, isScene);
             }
 
             foreach (var info in properties.Where(info => info.CanRead))
@@ -126,7 +126,7 @@ namespace ReferenceViewer
 
                 var value = info.GetValue(obj, new object[0]);
                 if (value != null)
-                    AddAttachedAssets(value, assetData, isScene);
+                    AddAttachedAssets(obj, value, assetData, isScene);
             }
         }
 
@@ -138,7 +138,7 @@ namespace ReferenceViewer
                 new {name = "material", type = typeof (Renderer)},
                 new {name = "material", type = typeof (WheelCollider)},
                 new {name = "material", type = typeof (TerrainCollider)},
-                new {name = "material", type = typeof (GUIElement)},
+                new {name = "material", type = typeof (GUIElement)}
             };
 
             return ignores.Any(ignore => Ignore(type, name, ignore.type, ignore.name));
@@ -151,7 +151,7 @@ namespace ReferenceViewer
             return isIgnoreType && name == ignoreName;
         }
 
-        private static void AddAttachedAssets(object value, AssetData assetData, bool isScene)
+        private static void AddAttachedAssets(Object component, object value, AssetData assetData, bool isScene)
         {
             var values = new List<Object>();
             if (value.GetType().IsArray)
@@ -167,25 +167,67 @@ namespace ReferenceViewer
 
             foreach (var v in values)
             {
-                AddAttachedAsset(v, assetData, isScene);
+                AddAttachedAsset(component, v, assetData, isScene);
             }
         }
 
-        private static void AddAttachedAsset(Object value, AssetData assetData, bool isScene)
+        private static void AddAttachedAsset(Object component, Object value, AssetData assetData, bool isScene)
         {
             if (!value) return;
 
             if (value as MonoBehaviour)
             {
+               
                 value = MonoScript.FromMonoBehaviour(value as MonoBehaviour);
+
+                if (isScene)
+                {
+                    AddSceneData(component, value, assetData);
+                }
+
             }
             else if (value as ScriptableObject)
             {
                 value = MonoScript.FromScriptableObject(value as ScriptableObject);
+
+                if (isScene)
+                {
+                    AddSceneData(component, value, assetData);
+                }
             }
             else if (isScene && PrefabUtility.GetPrefabType(value) == PrefabType.PrefabInstance)
             {
+                var name = "";
+                GameObject gameObject = null;
+                if (component as Component)
+                {
+                    gameObject = (component as Component).gameObject;
+                }
+                
+                if (!gameObject && value as GameObject)
+                {
+                    gameObject = value as GameObject;
+                }
+
+                if (gameObject)
+                {
+                    name = GetName(PrefabUtility.FindPrefabRoot(gameObject).transform);
+                }
+
                 value = PrefabUtility.GetPrefabParent(value);
+                if (string.IsNullOrEmpty(name))
+                    name = value.name;
+
+                assetData.sceneData.Add(new SceneData
+                {
+                    name = name,
+                    typeName = value.GetType().FullName,
+                    guid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(value))
+                });
+            }
+            else if (isScene)
+            {
+                AddSceneData(component, value, assetData);
             }
 
             var path = AssetDatabase.GetAssetPath(value);
@@ -196,5 +238,48 @@ namespace ReferenceViewer
             if (!assetData.reference.Contains(guid))
                 assetData.reference.Add(guid);
         }
+
+        private static void AddSceneData(Object component, Object value, AssetData assetData)
+        {
+            var _path = AssetDatabase.GetAssetPath(value);
+            if (!string.IsNullOrEmpty(_path))
+            {
+                var name = value.name;
+                GameObject gameObject = null;
+
+                if (component as Component)
+                {
+                    gameObject = (component as Component).gameObject;
+                }
+
+                if (!gameObject && value as GameObject)
+                {
+                    gameObject = value as GameObject;
+                }
+
+                if (gameObject)
+                    name = GetName(gameObject.transform);
+
+                assetData.sceneData.Add(new SceneData
+                {
+                    name = name,
+                    typeName = value.GetType().FullName,
+                    guid = AssetDatabase.AssetPathToGUID(_path)
+                });
+            }
+        }
+
+        private static string GetName(Transform transform, string name = "")
+        {
+            while (true)
+            {
+                name = transform.name + name;
+                if (!transform.parent) return name;
+                transform = transform.parent;
+                name = "/" + name;
+            }
+        }
     }
+
+
 }
