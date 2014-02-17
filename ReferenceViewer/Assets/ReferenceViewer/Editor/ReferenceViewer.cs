@@ -36,46 +36,61 @@ namespace ReferenceViewer
         {
             sceneReference.Clear();
             var jsonPath = "build/ReferenceViewer/data.json";
-
-            if (!File.Exists(jsonPath))
-            {
-                Debug.LogException(new NullReferenceException(jsonPath));
-                return;
-            }
-
-            var text = File.ReadAllText(jsonPath);
-            var data = LitJson.JsonMapper.ToObject<Data>(text);
             var guids = Selection.objects.Select(obj => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj))).ToArray();
+
+            Action find = () =>
+            {
+                var text = File.ReadAllText(jsonPath);
+                var data = LitJson.JsonMapper.ToObject<Data>(text);
+
+                Find(data, guids);
+            };
+
+            if (File.Exists(jsonPath))
+            {
+                find();
+            }
+            else
+            {
+                if (EditorUtility.DisplayDialog("必要なデータがありません", "データを作成します。\nデータ作成に時間がかかりますがよろしいですか？", "はい", "いいえ"))
+                {
+                    JsonCreator.Build(find);
+                }
+            }
+        }
+
+        private static void Find(Data data, params string[] guids)
+        {
             var items = guids
-                .Select(guid => new
-                {
-                    type = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), typeof(Object)).GetType(),
-                    searched = GetGUIContent(guid),
-                    referenced =
-                        data.assetData.Where(assetData => assetData.reference.Contains(guid))
-                            .Select(assetData => GetGUIContent(assetData.guid))
-                            .Where(c => c.image && guid != AssetDatabase.AssetPathToGUID(c.tooltip))
-                            .OrderBy(c => c.image.name)
-                            .ToList(),
-                    reference =
-                        data.assetData.Find(item => item.guid == guid)
-                            .reference.Where(g => g != guid)
-                            .Select(g => GetGUIContent(g))
-                            .Where(c => c.image)
-                            .OrderBy(c => c.image.name)
-                            .ToList()
-                })
-                .Where(item => (item.referenced.Count != 0 || item.reference.Count != 0) && item.searched.image)
-                .OrderBy(item => item.searched.image.name)
-                .Select(item => new Item
-                {
-                    type = item.type,
-                    searchedGUIContent = item.searched,
-                    referencedGUIContents = item.referenced,
-                    referenceGUIContents = item.reference
-                })
-                .Distinct(new CompareSelector<Item, string>(i => i.searchedGUIContent.tooltip))
-                .ToList();
+               .Select(guid => new
+               {
+                   type = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guid), typeof(Object)).GetType(),
+                   searched = GetGUIContent(guid),
+                   referenced =
+                       data.assetData.Where(assetData => assetData.reference.Contains(guid))
+                           .Select(assetData => GetGUIContent(assetData.guid))
+                           .Where(c => c.image && guid != AssetDatabase.AssetPathToGUID(c.tooltip))
+                           .OrderBy(c => c.image.name)
+                           .ToList(),
+                   reference =
+                       data.assetData.Find(item => item.guid == guid)
+                           .reference.Where(g => g != guid)
+                           .Select(g => GetGUIContent(g))
+                           .Where(c => c.image)
+                           .OrderBy(c => c.image.name)
+                           .ToList()
+               })
+               .Where(item => (item.referenced.Count != 0 || item.reference.Count != 0) && item.searched.image)
+               .OrderBy(item => item.searched.image.name)
+               .Select(item => new Item
+               {
+                   type = item.type,
+                   searchedGUIContent = item.searched,
+                   referencedGUIContents = item.referenced,
+                   referenceGUIContents = item.reference
+               })
+               .Distinct(new CompareSelector<Item, string>(i => i.searchedGUIContent.tooltip))
+               .ToList();
             foreach (var item in items)
             {
                 foreach (var i in item.referencedGUIContents)

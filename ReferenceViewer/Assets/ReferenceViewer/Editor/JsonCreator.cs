@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using UnityEditor;
 using System.IO;
 using System.Text;
@@ -7,7 +8,7 @@ namespace ReferenceViewer
 {
     public class JsonCreator
     {
-        public static void Build()
+        public static void Build(Action callback = null)
         {
             if (!EditorApplication.SaveCurrentSceneIfUserWantsTo()) return;
 
@@ -20,6 +21,8 @@ namespace ReferenceViewer
                 EditorUtility.UnloadUnusedAssets();
                 EditorApplication.OpenScene(currentScene);
                 Export(data);
+                if (callback != null)
+                    callback();
             });
         }
 
