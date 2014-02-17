@@ -1,6 +1,9 @@
-﻿public class SceneData
+﻿namespace ReferenceViewer
 {
-    public string guid;
-    public string typeName;
-    public string name;
+    public class SceneData
+    {
+        public string guid;
+        public string typeName;
+        public string name;
+    }
 }
