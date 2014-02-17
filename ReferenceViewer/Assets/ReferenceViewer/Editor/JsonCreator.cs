@@ -45,9 +45,8 @@ namespace ReferenceViewer
                         assetData.sceneData.Distinct(new CompareSelector<SceneData, string>(s => s.name + s.guid)).ToList();
             }
             sb = new StringBuilder();
-            writer = new LitJson.JsonWriter(sb) { PrettyPrint = true };
+            writer = new LitJson.JsonWriter(sb);
             LitJson.JsonMapper.ToJson(data, writer);
-
             File.WriteAllText(directory + "/data.json", sb.ToString());
         }
     }
