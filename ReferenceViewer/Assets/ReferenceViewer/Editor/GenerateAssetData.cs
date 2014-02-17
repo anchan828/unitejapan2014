@@ -12,7 +12,7 @@ namespace ReferenceViewer
 {
     public class GenerateAssetData
     {
-        private static readonly Type[] ignoreTypes = new[]
+        private static readonly Type[] ignoreTypes =
         {
             typeof (Rigidbody),
             typeof (Rigidbody2D),
@@ -20,7 +20,7 @@ namespace ReferenceViewer
             typeof (Object)
         };
 
-        public static void Build(string[] assetPaths, Action<AssetData[]> callback)
+        public static void Build(string[] assetPaths, Action<AssetData[]> callback = null)
         {
             var result = new AssetData[0];
             for (var i = 0; i < assetPaths.Length; i++)
