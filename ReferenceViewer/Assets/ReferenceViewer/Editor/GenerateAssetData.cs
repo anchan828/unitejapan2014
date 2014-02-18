@@ -63,11 +63,12 @@ namespace ReferenceViewer
                         for (var j = 0; j < animator.layerCount; j++)
                         {
                             var layer = animator.GetLayer(j);
-                            for (var k = 0; k < layer.stateMachine.stateCount; k++)
+
+                            SearchMotion(animator, layer.stateMachine, assetData);
+
+                            for (int s = 0; s < layer.stateMachine.stateMachineCount; s++)
                             {
-                                var motion = layer.stateMachine.GetState(k).GetMotion();
-                                if (motion)
-                                    AddAttachedAsset(animator, motion, assetData, false);
+                                SearchMotion(animator, layer.stateMachine.GetStateMachine(s), assetData);
                             }
                         }
                         break;
@@ -81,7 +82,31 @@ namespace ReferenceViewer
             callback(result);
             EditorUtility.ClearProgressBar();
         }
+        private static void SearchMotion(AnimatorController animator, StateMachine stateMachine, AssetData assetData)
+        {
 
+            for (var k = 0; k < stateMachine.stateCount; k++)
+            {
+                var state = stateMachine.GetState(k);
+                var motion = state.GetMotion();
+                if (motion)
+                    SearchBlendTreeMotion(animator, motion, assetData);
+            }
+        }
+
+        private static void SearchBlendTreeMotion(AnimatorController animator, Motion motion, AssetData assetData)
+        {
+            AddAttachedAsset(animator, motion, assetData, false);
+
+            var blendTree = motion as BlendTree;
+
+            if (!blendTree) return;
+
+            for (var i = 0; i < blendTree.childCount; i++)
+            {
+                SearchBlendTreeMotion(animator, blendTree.GetMotion(i), assetData);
+            }
+        }
         private static void DisplayProgressBar(string path, float progress)
         {
             EditorUtility.DisplayProgressBar(Path.GetFileName(path), Mathf.FloorToInt(progress * 100) + "% - " + Path.GetFileName(path), progress);
