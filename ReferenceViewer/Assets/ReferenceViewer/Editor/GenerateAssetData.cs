@@ -12,6 +12,9 @@ namespace ReferenceViewer
 {
     public class GenerateAssetData
     {
+        const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private static Dictionary<object, int> depths = new Dictionary<object, int>();
+
         private static readonly Type[] ignoreTypes =
         {
             typeof (Rigidbody),
@@ -80,6 +83,7 @@ namespace ReferenceViewer
 
             }
             callback(result);
+            depths.Clear();
             EditorUtility.ClearProgressBar();
         }
         private static void SearchMotion(AnimatorController animator, StateMachine stateMachine, AssetData assetData)
@@ -124,6 +128,11 @@ namespace ReferenceViewer
 
         private static void SearchFieldAndProperty(Object obj, AssetData assetData, bool isScene = false)
         {
+            SearchFieldAndProperty(obj, obj, assetData, isScene);
+        }
+
+        private static void SearchFieldAndProperty(Object obj, object val, AssetData assetData, bool isScene = false)
+        {
             // TODO 
             if (obj is NavMeshAgent)
                 return;
@@ -131,27 +140,62 @@ namespace ReferenceViewer
             if (ignoreTypes.Contains(obj.GetType()))
                 return;
 
-            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+            SearchField(obj, val, assetData, isScene);
+            SearchProperty(obj, val, assetData, isScene);
 
-            var fields = obj.GetType().GetFields(flags);
-            var properties = obj.GetType().GetProperties(flags);
+        }
 
+       
 
-            foreach (var value in fields.Select(info => info.GetValue(obj) as Object).Where(o => o != null))
+        private static void SearchField(Object component, object val, AssetData assetData, bool isScene)
+        {
+            var fields = val.GetType().GetFields(flags);
+            foreach (var info in fields)
             {
-                AddAttachedAssets(obj, value, assetData, isScene);
+
+                var isObject = info.FieldType.IsSubclassOf(typeof(Object)) ||
+                               info.FieldType == typeof(Object) ||
+                               info.FieldType.IsSerializable &&
+                               info.FieldType.IsClass;
+
+
+                if (!isObject || Ignore(val.GetType(), info.Name)) continue;
+
+                var value = info.GetValue(val);
+                if (value != null)
+                {
+
+                    AddAttachedAssets(component, value, assetData, isScene);
+
+                    if (!depths.ContainsKey(value))
+                    {
+                        depths.Add(value, 0);
+                    }
+
+                    if (!ignoreTypes.Contains(value.GetType()) && depths[value]++ <= 100)
+                    {
+                        SearchField(component, value, assetData, isScene);
+                    }
+                }
             }
+        }
+
+        private static void SearchProperty(Object component, object val, AssetData assetData, bool isScene)
+        {
+            var properties = val.GetType().GetProperties(flags);
 
             foreach (var info in properties.Where(info => info.CanRead))
             {
                 var isObject = info.PropertyType.IsSubclassOf(typeof(Object)) ||
                                info.PropertyType == typeof(Object);
 
-                if (!isObject || Ignore(obj.GetType(), info.Name)) continue;
+                if (!isObject || Ignore(val.GetType(), info.Name)) continue;
 
-                var value = info.GetValue(obj, new object[0]);
+                var value = info.GetValue(val, new object[0]);
                 if (value != null)
-                    AddAttachedAssets(obj, value, assetData, isScene);
+                {
+                    AddAttachedAssets(component, value, assetData, isScene);
+                }
             }
         }
 
