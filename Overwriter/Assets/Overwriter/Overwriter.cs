@@ -14,9 +14,18 @@ namespace Overwriter
     public class Preference
     {
         static readonly string key = "Overwriter";
-        static bool isEnabled = false;
+        static bool isEnabled;
         static Extension ex;
         static Overwriter overwriter = new Overwriter();
+
+        static GUILayoutOption width
+        {
+            get
+            {
+                return GUILayout.Width(Screen.width * 0.25f);
+            }
+
+        }
 
         [PreferenceItem("Overwriter")]
         static void PreferenceOnGUI()
@@ -29,24 +38,29 @@ namespace Overwriter
                 RefreshExtensions();
             }
 
-            overwriter.all = EditorGUILayout.ToggleLeft("すべての拡張子", overwriter.all);
+            EditorGUI.BeginChangeCheck();
+            var all = EditorGUILayout.ToggleLeft("すべての拡張子", overwriter.all);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                overwriter.all = all;
+                UpdateExtensions();
+            }
+
             EditorGUI.BeginDisabledGroup(overwriter.all);
 
-            EditorGUILayout.BeginHorizontal(GUILayout.Width(Screen.width / 2));
+            EditorGUILayout.BeginHorizontal(width);
             ex.extension = EditorGUILayout.TextField(ex.extension);
             if (GUILayout.Button("+") && !string.IsNullOrEmpty(ex.extension))
             {
-                overwriter.extensions.Insert(0, ex);
-                ex = new Exception();
-                GUI.FocusControl("");
-                UpdateExtensions();
+                AddExtension();
             }
             EditorGUILayout.EndHorizontal();
 
-
+            EditorGUIUtility.labelWidth = 46;
             for (int i = 0; i < overwriter.extensions.Count; i++)
             {
-                EditorGUILayout.BeginHorizontal(GUILayout.Width(Screen.width / 2));
+                EditorGUILayout.BeginHorizontal(width, GUILayout.ExpandWidth(false));
 
                 var extension = overwriter.extensions[i];
 
@@ -61,6 +75,18 @@ namespace Overwriter
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUI.EndDisabledGroup();
+        }
+
+        private static void AddExtension()
+        {
+            if (!ex.extension.StartsWith("."))
+            {
+                ex.extension = "." + ex.extension;
+            }
+            overwriter.extensions.Insert(0, ex);
+            ex = new Exception();
+            GUI.FocusControl("");
+            UpdateExtensions();
         }
 
         static void UpdateExtensions()
@@ -78,8 +104,6 @@ namespace Overwriter
         static void DrawExtension(Extension extension)
         {
             extension.enabled = EditorGUILayout.ToggleLeft(extension.extension, extension.enabled);
-            EditorGUI.BeginDisabledGroup(!extension.enabled);
-            EditorGUI.EndDisabledGroup();
         }
 
         public static Overwriter GetOverwriter()
@@ -142,24 +166,27 @@ namespace Overwriter
     #region Importer
     public class AssetPostprocessor : UnityEditor.AssetPostprocessor
     {
-
         static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromPath)
         {
             var overwriter = Preference.GetOverwriter();
+          
             foreach (var assetPath in importedAssets)
             {
                 var extension = Path.GetExtension(assetPath);
-                if (overwriter.all || overwriter.extensions.Where(ex => ex.enabled).Select(ex => ex.extension).Contains(extension))
-                {
-                    const string pattern = "\\s[\\d]+\\.(.*)$";
+                
+                if (!overwriter.all && !overwriter.extensions
+                    .Where(ex => ex.enabled)
+                    .Select(ex => ex.extension)
+                    .Contains(extension)) continue;
 
-                    if (!Regex.IsMatch(assetPath, pattern)) continue;
+                const string pattern = "\\s[\\d]+\\.(.*)$";
 
-                    var _assetPath = Regex.Replace(assetPath, pattern, ".$1");
-                    File.Copy(assetPath, _assetPath, true);
-                    AssetDatabase.DeleteAsset(assetPath);
-                    AssetDatabase.ImportAsset(_assetPath, ImportAssetOptions.ForceUpdate);
-                }
+                if (!Regex.IsMatch(assetPath, pattern)) continue;
+
+                var _assetPath = Regex.Replace(assetPath, pattern, ".$1");
+                File.Copy(assetPath, _assetPath, true);
+                AssetDatabase.DeleteAsset(assetPath);
+                AssetDatabase.ImportAsset(_assetPath, ImportAssetOptions.ForceUpdate);
             }
         }
     }
