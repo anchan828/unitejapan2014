@@ -133,19 +133,13 @@ namespace ReferenceViewer
 
         private static void SearchFieldAndProperty(Object obj, object val, AssetData assetData, bool isScene = false)
         {
-            // TODO 
-            if (obj is NavMeshAgent)
-                return;
-
-            if (ignoreTypes.Contains(obj.GetType()))
+            Debug.Log(obj);
+            if (!obj || obj is NavMeshAgent || ignoreTypes.Contains(obj.GetType()))
                 return;
 
             SearchField(obj, val, assetData, isScene);
             SearchProperty(obj, val, assetData, isScene);
-
         }
-
-       
 
         private static void SearchField(Object component, object val, AssetData assetData, bool isScene)
         {

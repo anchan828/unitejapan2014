@@ -125,66 +125,61 @@ namespace ReferenceViewer
         private void OnGUI()
         {
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Create Json", EditorStyles.toolbarButton))
+            
+            if (GUILayout.Button("Update Json", EditorStyles.toolbarButton))
             {
                 JsonCreator.Build();
             }
 
+          
 
-            if (items.Count == 0)
+            EditorGUI.BeginChangeCheck();
+            var types = items.Select(item => item.type).ToArray();
+            var display = types.Select(t => t.Name).ToArray();
+            for (var i = 0; i < display.Length; i++)
             {
-                EditorGUILayout.EndHorizontal();
-                EditorGUILayout.LabelField("Not Found");
+                switch (display[i])
+                {
+                    case "Object":
+                        display[i] = "Scene";
+                        break;
+                    case "GameObject":
+                        display[i] = "Prefab";
+                        break;
+                }
             }
-            else
+            ArrayUtility.Insert(ref display, 0, "All");
+            var selected = EditorGUILayout.Popup(selectedFilter, display, EditorStyles.toolbarPopup);
+            if (EditorGUI.EndChangeCheck())
             {
-                EditorGUI.BeginChangeCheck();
-                var types = items.Select(item => item.type).ToArray();
-                var display = types.Select(t => t.Name).ToArray();
-                for (var i = 0; i < display.Length; i++)
-                {
-                    switch (display[i])
-                    {
-                        case "Object":
-                            display[i] = "Scene";
-                            break;
-                        case "GameObject":
-                            display[i] = "Prefab";
-                            break;
-                    }
-                }
-                ArrayUtility.Insert(ref display, 0, "All");
-                var selected = EditorGUILayout.Popup(selectedFilter, display, EditorStyles.toolbarPopup);
-                if (EditorGUI.EndChangeCheck())
-                {
-                    selectedFilter = selected;
-                }
-                EditorGUILayout.EndHorizontal();
-                pos = EditorGUILayout.BeginScrollView(pos);
-
-                foreach (var item in items)
-                {
-                    if (selectedFilter != 0 && item.type != types[selectedFilter - 1])
-                    {
-                        continue;
-                    }
-
-                    EditorGUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width * 0.96f));
-                    DrawGUIContents(item.searchedGUIContent, item.referenceGUIContents);
-                    var iconSize = EditorGUIUtility.GetIconSize();
-                    EditorGUIUtility.SetIconSize(Vector2.one * 32);
-                    GUILayout.Label(item.searchedGUIContent, GUILayout.Width(Screen.width * 0.3f), GUILayout.ExpandWidth(false));
-                    EditorGUIUtility.SetIconSize(iconSize);
-                    PingObjectIfOnMouseDown(item.searchedGUIContent.tooltip);
-
-                    DrawGUIContents(item.searchedGUIContent, item.referencedGUIContents);
-                    EditorGUILayout.EndHorizontal();
-                    EditorGUILayout.Space();
-                }
-                EditorGUILayout.EndScrollView();
+                selectedFilter = selected;
             }
+            EditorGUILayout.EndHorizontal();
 
+            if (items.Count == 0) return;
 
+            pos = EditorGUILayout.BeginScrollView(pos);
+
+            foreach (var item in items)
+            {
+                if (selectedFilter != 0 && item.type != types[selectedFilter - 1])
+                {
+                    continue;
+                }
+
+                EditorGUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width * 0.96f));
+                DrawGUIContents(item.searchedGUIContent, item.referenceGUIContents);
+                var iconSize = EditorGUIUtility.GetIconSize();
+                EditorGUIUtility.SetIconSize(Vector2.one * 32);
+                GUILayout.Label(item.searchedGUIContent, GUILayout.Width(Screen.width * 0.3f), GUILayout.ExpandWidth(false));
+                EditorGUIUtility.SetIconSize(iconSize);
+                PingObjectIfOnMouseDown(item.searchedGUIContent.tooltip);
+
+                DrawGUIContents(item.searchedGUIContent, item.referencedGUIContents);
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.Space();
+            }
+            EditorGUILayout.EndScrollView();
         }
 
         private static void DrawGUIContents(GUIContent searched, List<GUIContent> contents)
