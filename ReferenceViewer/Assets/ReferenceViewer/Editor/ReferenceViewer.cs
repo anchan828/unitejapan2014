@@ -246,7 +246,7 @@ namespace ReferenceViewer
             if (!GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition)) return;
 
             var obj = AssetDatabase.LoadAssetAtPath(path, typeof(Object));
-
+            Selection.activeObject = obj;
             EditorGUIUtility.PingObject(obj);
         }
 
