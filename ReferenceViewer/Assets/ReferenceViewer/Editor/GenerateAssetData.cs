@@ -133,7 +133,6 @@ namespace ReferenceViewer
 
         private static void SearchFieldAndProperty(Object obj, object val, AssetData assetData, bool isScene = false)
         {
-            Debug.Log(obj);
             if (!obj || obj is NavMeshAgent || ignoreTypes.Contains(obj.GetType()))
                 return;
 
