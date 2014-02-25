@@ -15,13 +15,21 @@ namespace ReferenceViewer
         const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private static Dictionary<object, int> depths = new Dictionary<object, int>();
 
-        private static readonly Type[] ignoreTypes =
+        private static readonly string[] ignoreTypes =
         {
-            typeof (Rigidbody),
-            typeof (Rigidbody2D),
-            typeof (Transform),
-            typeof (Object)
+            "Rigidbody",
+            "Rigidbody2D",
+            "Transform",
+            "Object"
         };
+
+        private static bool isUnity41
+        {
+            get
+            {
+                return Application.unityVersion.StartsWith("4.1");
+            }
+        }
 
         public static void Build(string[] assetPaths, Action<AssetData[]> callback = null)
         {
@@ -53,7 +61,7 @@ namespace ReferenceViewer
                         DisplayProgressBar(assetData.path, progress);
                         if (EditorApplication.OpenScene(assetPath))
                         {
-                            foreach (var go in Object.FindObjectsOfType<GameObject>())
+                            foreach (GameObject go in Object.FindObjectsOfType(typeof(GameObject)))
                             {
                                 SearchGameObject(go, assetData, true);
                             }
@@ -63,15 +71,48 @@ namespace ReferenceViewer
                         var animator =
                             (AnimatorController)
                                 AssetDatabase.LoadAssetAtPath(assetPath, typeof(AnimatorController));
-                        for (var j = 0; j < animator.layerCount; j++)
+                        int layerCount = 0;
+                        if (isUnity41)
                         {
-                            var layer = animator.GetLayer(j);
+                            layerCount = (int)animator.GetType().GetMethod("GetLayerCount").Invoke(animator, new object[0]);
+                        }
+                        else
+                        {
+                            layerCount = (int)animator.GetType().GetProperty("layerCount").GetValue(animator, new object[0]);
+                        }
+                        for (var j = 0; j < layerCount; j++)
+                        {
+                            StateMachine stateMachine = null;
 
-                            SearchMotion(animator, layer.stateMachine, assetData);
-
-                            for (int s = 0; s < layer.stateMachine.stateMachineCount; s++)
+                            if (isUnity41)
                             {
-                                SearchMotion(animator, layer.stateMachine.GetStateMachine(s), assetData);
+                                stateMachine =
+                                    (StateMachine)
+                                        animator.GetType()
+                                            .GetMethod("GetLayerStateMachine")
+                                            .Invoke(animator, new object[] { j });
+                            }
+                            else
+                            {
+                                var layer =
+                                        animator.GetType().GetMethod("GetLayer").Invoke(animator, new object[] { j });
+                                stateMachine = (StateMachine)layer.GetType().GetProperty("stateMachine").GetValue(layer, new object[0]);
+                            }
+                            SearchMotion(animator, stateMachine, assetData);
+                            var stateMachineCount = 0;
+                            if (isUnity41)
+                            {
+                                stateMachineCount = (int)stateMachine.GetType().GetMethod("GetStateMachineCount").Invoke(stateMachine, new object[0]);
+                            }
+                            else
+                            {
+                                stateMachineCount =
+                                    (int)stateMachine.GetType().GetProperty("stateMachineCount").GetValue(stateMachine, new object[0]);
+                            }
+
+                            for (var s = 0; s < stateMachineCount; s++)
+                            {
+                                SearchMotion(animator, stateMachine.GetStateMachine(s), assetData);
                             }
                         }
                         break;
@@ -88,11 +129,28 @@ namespace ReferenceViewer
         }
         private static void SearchMotion(AnimatorController animator, StateMachine stateMachine, AssetData assetData)
         {
+            var stateCount = 0;
 
-            for (var k = 0; k < stateMachine.stateCount; k++)
+            if (isUnity41)
+            {
+                stateCount = (int)stateMachine.GetType().GetMethod("GetStateCount").Invoke(stateMachine, new object[0]);
+            }
+            else
+            {
+                stateCount =
+                    (int)stateMachine.GetType().GetProperty("stateCount").GetValue(stateMachine, new object[0]);
+            }
+            for (var k = 0; k < stateCount; k++)
             {
                 var state = stateMachine.GetState(k);
-                var motion = state.GetMotion();
+                var parameters = new object[0];
+                var types = new Type[0];
+                if (isUnity41)
+                {
+                    ArrayUtility.Add(ref parameters, 0);
+                    ArrayUtility.Add(ref types, typeof(int));
+                }
+                var motion = state.GetType().GetMethod("GetMotion", types).Invoke(state, parameters) as Motion;
                 if (motion)
                     SearchBlendTreeMotion(animator, motion, assetData);
             }
@@ -105,8 +163,17 @@ namespace ReferenceViewer
             var blendTree = motion as BlendTree;
 
             if (!blendTree) return;
+            int childCount = 0;
 
-            for (var i = 0; i < blendTree.childCount; i++)
+            if (isUnity41)
+            {
+                childCount = (int)blendTree.GetType().GetMethod("GetChildCount").Invoke(blendTree, new object[0]);
+            }
+            else
+            {
+                childCount = (int)blendTree.GetType().GetProperty("childCount").GetValue(blendTree, new object[0]);
+            }
+            for (var i = 0; i < childCount; i++)
             {
                 SearchBlendTreeMotion(animator, blendTree.GetMotion(i), assetData);
             }
@@ -133,7 +200,7 @@ namespace ReferenceViewer
 
         private static void SearchFieldAndProperty(Object obj, object val, AssetData assetData, bool isScene = false)
         {
-            if (!obj || obj is NavMeshAgent || ignoreTypes.Contains(obj.GetType()))
+            if (!obj || obj is NavMeshAgent || ignoreTypes.Contains(obj.GetType().Name))
                 return;
 
             SearchField(obj, val, assetData, isScene);
@@ -165,7 +232,7 @@ namespace ReferenceViewer
                         depths.Add(value, 0);
                     }
 
-                    if (!ignoreTypes.Contains(value.GetType()) && depths[value]++ <= 100)
+                    if (!ignoreTypes.Contains(value.GetType().Name) && depths[value]++ <= 100)
                     {
                         SearchField(component, value, assetData, isScene);
                     }
@@ -336,7 +403,7 @@ namespace ReferenceViewer
                 name = "/" + name;
             }
         }
+
+
     }
-
-
 }
