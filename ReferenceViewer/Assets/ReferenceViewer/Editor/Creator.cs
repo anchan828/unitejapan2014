@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor;
 using System.IO;
-using System.Text;
 
 namespace ReferenceViewer
 {
-    public class JsonCreator
+    public class Creator
     {
         public static void Build(Action callback = null)
         {
@@ -15,7 +15,7 @@ namespace ReferenceViewer
             var currentScene = EditorApplication.currentScene;
             var data = new Data();
 
-            GenerateAssetData.Build(AssetDatabase.GetAllAssetPaths(), assetData =>
+            Generate.Build(AssetDatabase.GetAllAssetPaths(), assetData =>
             {
                 data.assetData.AddRange(assetData);
                 EditorUtility.UnloadUnusedAssets();
@@ -33,17 +33,22 @@ namespace ReferenceViewer
 
             Directory.CreateDirectory(directory);
 
-            for (int i = 0; i < data.assetData.Count; i++)
+            foreach (var assetData in data.assetData.Where(assetData => assetData.sceneData.Count != 0))
             {
-                var assetData = data.assetData[i];
-                if (assetData.sceneData.Count != 0)
-                    assetData.sceneData =
-                        assetData.sceneData.Distinct(new CompareSelector<SceneData, string>(s => s.name + s.guid)).ToList();
+                assetData.sceneData =
+                    assetData.sceneData.Distinct(new CompareSelector<SceneData, string>(s => s.name + s.guid)).ToList();
             }
-            var sb = new StringBuilder();
-            var writer = new LitJson.JsonWriter(sb);
-            LitJson.JsonMapper.ToJson(data, writer);
-            File.WriteAllText(directory + "/data.json", sb.ToString());
+            File.WriteAllBytes(directory + "/data.dat", ObjectToByteArray(data));
+        }
+
+        static byte[] ObjectToByteArray(object obj)
+        {
+            if (obj == null)
+                return null;
+            var bf = new BinaryFormatter();
+            var ms = new MemoryStream();
+            bf.Serialize(ms, obj);
+            return ms.ToArray();
         }
     }
 }

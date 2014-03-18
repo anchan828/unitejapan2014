@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace ReferenceViewer
 {
-    public class GenerateAssetData
+    public class Generate
     {
         const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         private static Dictionary<object, int> depths = new Dictionary<object, int>();

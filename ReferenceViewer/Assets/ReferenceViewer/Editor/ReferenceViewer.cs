@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEditor;
 using System.IO;
@@ -35,18 +36,18 @@ namespace ReferenceViewer
         private static void Find()
         {
             sceneReference.Clear();
-            var jsonPath = "build/ReferenceViewer/data.json";
+            var path = "build/ReferenceViewer/data.dat";
             var guids = Selection.objects.Select(obj => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj))).ToArray();
 
             Action find = () =>
             {
-                var text = File.ReadAllText(jsonPath);
-                var data = LitJson.JsonMapper.ToObject<Data>(text);
+                var text = File.ReadAllBytes(path);
+                var data = ByteArrayToObject<Data>(text);
 
                 Find(data, guids);
             };
 
-            if (File.Exists(jsonPath))
+            if (File.Exists(path))
             {
                 find();
             }
@@ -54,7 +55,7 @@ namespace ReferenceViewer
             {
                 if (EditorUtility.DisplayDialog("必要なデータがありません", "データを作成します。\nデータ作成に時間がかかりますがよろしいですか？", "はい", "いいえ"))
                 {
-                    JsonCreator.Build(find);
+                    Creator.Build(find);
                 }
             }
         }
@@ -97,7 +98,6 @@ namespace ReferenceViewer
                 {
                     if (Path.GetExtension(i.tooltip) == ".unity")
                     {
-
                         var d = data.assetData.Find(asset => asset.path == i.tooltip).sceneData;
                         var key = item.searchedGUIContent.tooltip + " - " + i.tooltip;
                         if (sceneReference.ContainsKey(key))
@@ -126,12 +126,10 @@ namespace ReferenceViewer
         {
             EditorGUILayout.BeginHorizontal();
             
-            if (GUILayout.Button("Update Json", EditorStyles.toolbarButton))
+            if (GUILayout.Button("Update", EditorStyles.toolbarButton))
             {
-                JsonCreator.Build();
+                Creator.Build();
             }
-
-          
 
             EditorGUI.BeginChangeCheck();
             var types = items.Select(item => item.type).ToArray();
@@ -230,6 +228,8 @@ namespace ReferenceViewer
             }
         }
 
+        
+
         private static bool IsScene(GUIContent content)
         {
             return Path.GetExtension(content.tooltip) == ".unity";
@@ -271,24 +271,18 @@ namespace ReferenceViewer
             return content;
         }
 
-        private class CompareSelector<T, TKey> : IEqualityComparer<T>
+        private static T ByteArrayToObject<T>(byte[] arrBytes)
         {
-            private Func<T, TKey> selector;
-
-            public CompareSelector(Func<T, TKey> selector)
+            T obj;
+            using (var memStream = new MemoryStream())
             {
-                this.selector = selector;
+                var binForm = new BinaryFormatter();
+                memStream.Write(arrBytes, 0, arrBytes.Length);
+                memStream.Seek(0, SeekOrigin.Begin);
+                obj = (T)binForm.Deserialize(memStream);
             }
 
-            public bool Equals(T x, T y)
-            {
-                return selector(x).Equals(selector(y));
-            }
-
-            public int GetHashCode(T obj)
-            {
-                return selector(obj).GetHashCode();
-            }
+            return obj;
         }
         private class Item
         {
