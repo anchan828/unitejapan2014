@@ -4,10 +4,11 @@ using UnityEngine;
 
 public class CustomEditorGUI
 {
-    static GUIStyle spriteStyle = new GUIStyle(EditorStyles.label);
+    static readonly GUIStyle spriteStyle = new GUIStyle(EditorStyles.label);
+
     public static Sprite SpriteField(Rect rect, Sprite sprite)
     {
-        var id = GUIUtility.GetControlID(FocusType.Native, rect);
+        var id = GUIUtility.GetControlID(FocusType.Keyboard, rect);
 
         if (Event.current.type == EventType.Repaint)
         {
@@ -35,7 +36,8 @@ public class CustomEditorGUI
         buttonRect.y += rect.height - 16;
         buttonRect.height = 16;
 
-        if (Event.current.commandName == "ObjectSelectorUpdated")
+        if (Event.current.commandName == "ObjectSelectorUpdated" 
+            && id == EditorGUIUtility.GetObjectPickerControlID())
         {
             sprite = EditorGUIUtility.GetObjectPickerObject() as Sprite;
             HandleUtility.Repaint();
@@ -64,10 +66,10 @@ public class CustomEditorGUI
                     break;
             }
         }
+
         if (GUI.Button(buttonRect, "select", EditorStyles.objectFieldThumb.name + "Overlay2"))
         {
-            EditorGUIUtility.ShowObjectPicker<Sprite>(sprite, false, "",
-                GUIUtility.GetControlID(FocusType.Passive));
+            EditorGUIUtility.ShowObjectPicker<Sprite>(sprite, false, "", id);
             GUIUtility.ExitGUI();
         }
         return sprite;
