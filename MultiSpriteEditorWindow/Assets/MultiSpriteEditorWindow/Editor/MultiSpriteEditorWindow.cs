@@ -7,10 +7,20 @@ namespace MultiSpriteEditor
 {
     public class MultiSpriteEditorWindow : ScriptableWizard
     {
-        public Vector2 pixelSize = new Vector2(1, 1);
-        public Vector2 offset = Vector2.zero;
-        public Vector2 padding = Vector2.zero;
-        public SpritePivot pivot = SpritePivot.Center;
+
+		[SerializeField] Vector2 pixelSize = new Vector2(1, 1);
+		[SerializeField] Vector2 offset = Vector2.zero;
+		[SerializeField] Vector2 padding = Vector2.zero;
+		[SerializeField] SpritePivot pivot = SpritePivot.Center;
+
+		[PreviewTexture, SerializeField] Texture2D[] preview = new Texture2D[0];
+
+
+		private Texture2D[] m_selectedTextures{
+			get{
+				return Selection.objects.Where(t => t.GetType() == typeof(Texture2D)).Cast<Texture2D>().ToArray();
+			}
+		}
 
         [MenuItem("Window/MultiSpriteEditor")]
         public static void Open()
@@ -18,30 +28,40 @@ namespace MultiSpriteEditor
             DisplayWizard<MultiSpriteEditorWindow>("MultiSpriteEditor", "Slice");
         }
 
-        private void OnWizardCreate()
+		void OnEnable ()
+		{
+			preview = m_selectedTextures;
+		}
+
+		void OnSelectionChange ()
+		{
+			preview = m_selectedTextures;
+			isValid = preview.Length != 0;
+			Repaint();
+		}
+
+        void OnWizardCreate()
         {
             DoSlicing();
         }
 
-        public void DoSlicing()
+		public void DoSlicing()
         {
-
-            var textures = Selection.objects.Where(t => t.GetType() == typeof(Texture2D)).Cast<Texture2D>().ToArray();
-
-            for (var i = 0; i < textures.Length; i++)
+			var _textures = m_selectedTextures;
+			for (var i = 0; i < _textures.Length; i++)
             {
-                var tex = textures[i];
+				var tex = _textures[i];
                 var path = AssetDatabase.GetAssetPath(tex);
                 var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-                var cache = importer.isReadable;
+				var isReadable = importer.isReadable;
                 importer.isReadable = true;
                 EditorUtility.SetDirty(importer);
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
                 var rects = GenerateGridSpriteRectangles(tex);
-                EditorUtility.DisplayProgressBar(tex.name, string.Format("{0}/{1}", i, textures.Length),
-                    (float)i / (float)textures.Length);
+				EditorUtility.DisplayProgressBar(tex.name, string.Format("{0}/{1}", i, _textures.Length),
+				                                 (float)i / (float)_textures.Length);
 
-                importer.isReadable = cache;
+				importer.isReadable = isReadable;
 
                 importer.spritesheet = rects.Select((t, j) => new SpriteMetaData
                 {
