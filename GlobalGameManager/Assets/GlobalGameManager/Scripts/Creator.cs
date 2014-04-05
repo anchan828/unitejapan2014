@@ -12,28 +12,32 @@ namespace GlobalGameManager
 
     [InitializeOnLoad]
 #endif
-    public class Creator
-    {
+	public class Creator
+	{
 
-        private const string inspectorFolderPath = "Assets/GlobalGameManager/Editor/Inspectors";
-        private const string globalGameManagerFolderPath = "Assets/GlobalGameManager/Resources/GlobalGameManager";
+		private const string inspectorFolderPath = "Assets/GlobalGameManager/Editor/Inspectors";
+		private const string globalGameManagerFolderPath = "Assets/GlobalGameManager/Resources/GlobalGameManager";
 
 
         #region constructors
 
-        static Creator()
-        {
+		static Creator ()
+		{
 #if UNITY_EDITOR
 
-            foreach (
-                var monoScript in
-                    MonoImporter.GetAllRuntimeMonoScripts()
-                        .Where(
-                            monoScript =>
-                                monoScript.GetClass() != null &&
-                                monoScript.GetClass().IsSubclassOf(typeof (GlobalGameManagerObject))))
+            foreach (var monoScript in MonoImporter.GetAllRuntimeMonoScripts())
             {
                 var type = monoScript.GetClass();
+
+				if (type == null)
+				{
+					continue;
+				}
+                    
+				if(type.IsSubclassOf(typeof (GlobalGameManagerObject)) == false)
+				{
+					continue;
+				}
 
                 if (ExistGlobalGameManager(type) == false)
                 {
@@ -45,26 +49,25 @@ namespace GlobalGameManager
                     GlobalGameManagerInspector(type);
                 }
             }
-
 #endif
-        }
+		}
 
         #endregion
 
         #region public methods
 
-        public static T GlobalGameManager<T>() where T : GlobalGameManagerObject
-        {
-            return (T) GlobalGameManager(typeof (T));
-        }
+		public static T GlobalGameManager<T> () where T : GlobalGameManagerObject
+		{
+			return (T)GlobalGameManager (typeof(T));
+		}
 
         #endregion
 
         #region private methods
 
-        private static GlobalGameManagerObject GlobalGameManager(Type type)
-        {
-            var instance = ScriptableObject.CreateInstance(type) as GlobalGameManagerObject;
+		private static GlobalGameManagerObject GlobalGameManager (Type type)
+		{
+			var instance = ScriptableObject.CreateInstance (type) as GlobalGameManagerObject;
 #if UNITY_EDITOR
 
 
@@ -78,11 +81,11 @@ namespace GlobalGameManager
             instance =
                 Resources.Load(string.Format("GlobalGameManager/{0}", type.Name), type) as GlobalGameManagerObject;
 #endif
-            return instance;
-        }
+			return instance;
+		}
 
-        private static void GlobalGameManagerInspector(Type type)
-        {
+		private static void GlobalGameManagerInspector (Type type)
+		{
 #if UNITY_EDITOR
             var script = new StringBuilder();
             script.AppendLine("using UnityEditor;");
@@ -102,32 +105,32 @@ namespace GlobalGameManager
             var content = Regex.Replace(script.ToString(), "#NAME#", type.Name);
             var path = GetGlobalGameManagerInspectorPath(type);
             File.WriteAllText(path, content);
-            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            AssetDatabase.ImportAsset(path);
 #endif
-        }
+		}
 
-        private static string GetGlobalGameManagerInspectorPath(Type type)
-        {
-            return string.Format("{0}/{1}Inspector.cs", inspectorFolderPath, type.Name);
-        }
+		private static string GetGlobalGameManagerInspectorPath (Type type)
+		{
+			return string.Format ("{0}/{1}Inspector.cs", inspectorFolderPath, type.Name);
+		}
 
-        private static string GetGlobalGameManagerPath(Type type)
-        {
-            return string.Format("{0}/{1}.asset", globalGameManagerFolderPath, type.Name);
-        }
+		private static string GetGlobalGameManagerPath (Type type)
+		{
+			return string.Format ("{0}/{1}.asset", globalGameManagerFolderPath, type.Name);
+		}
 
-        private static bool ExistGameManagerInspector(Type type)
-        {
-            Directory.CreateDirectory(inspectorFolderPath);
-            return File.Exists(GetGlobalGameManagerInspectorPath(type));
-        }
+		private static bool ExistGameManagerInspector (Type type)
+		{
+			Directory.CreateDirectory (inspectorFolderPath);
+			return File.Exists (GetGlobalGameManagerInspectorPath (type));
+		}
 
-        private static bool ExistGlobalGameManager(Type type)
-        {
-            Directory.CreateDirectory(globalGameManagerFolderPath);
-            return File.Exists(GetGlobalGameManagerPath(type));
-        }
+		private static bool ExistGlobalGameManager (Type type)
+		{
+			Directory.CreateDirectory (globalGameManagerFolderPath);
+			return File.Exists (GetGlobalGameManagerPath (type));
+		}
 
         #endregion private methods
-    }
+	}
 }

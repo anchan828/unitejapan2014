@@ -37,6 +37,7 @@ namespace ReferenceViewer
         {
             sceneReference.Clear();
             var path = "build/ReferenceViewer/data.dat";
+
             var guids = Selection.objects.Select(obj => AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(obj))).ToArray();
 
             Action find = () =>
@@ -129,6 +130,7 @@ namespace ReferenceViewer
             if (GUILayout.Button("Update", EditorStyles.toolbarButton))
             {
                 Creator.Build();
+				EditorGUIUtility.ExitGUI();
             }
 
             EditorGUI.BeginChangeCheck();

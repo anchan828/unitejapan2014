@@ -9,8 +9,8 @@ public class CustomEditorGUI
     public static Sprite SpriteField(Rect rect, Sprite sprite)
     {
         var id = GUIUtility.GetControlID(FocusType.Keyboard, rect);
-
-        if (Event.current.type == EventType.Repaint)
+		var evt = Event.current;
+		if (evt.type == EventType.Repaint)
         {
             EditorStyles.objectFieldThumb.Draw(rect, GUIContent.none, id, DragAndDrop.activeControlID == id);
 
@@ -36,15 +36,15 @@ public class CustomEditorGUI
         buttonRect.y += rect.height - 16;
         buttonRect.height = 16;
 
-        if (Event.current.commandName == "ObjectSelectorUpdated" 
+		if (evt.commandName == "ObjectSelectorUpdated" 
             && id == EditorGUIUtility.GetObjectPickerControlID())
         {
             sprite = EditorGUIUtility.GetObjectPickerObject() as Sprite;
             HandleUtility.Repaint();
         }
-        if (rect.Contains(Event.current.mousePosition))
+		if (rect.Contains(evt.mousePosition))
         {
-            switch (Event.current.type)
+			switch (evt.type)
             {
                 case EventType.DragUpdated:
                 case EventType.DragPerform:
@@ -67,11 +67,15 @@ public class CustomEditorGUI
             }
         }
 
-        if (GUI.Button(buttonRect, "select", EditorStyles.objectFieldThumb.name + "Overlay2"))
+		bool hitEnter = evt.type == EventType.KeyDown && (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter) && EditorGUIUtility.keyboardControl == id;
+
+		if (GUI.Button(buttonRect, "select", EditorStyles.objectFieldThumb.name + "Overlay2") || hitEnter)
         {
-            EditorGUIUtility.ShowObjectPicker<Sprite>(sprite, false, "", id);
-            GUIUtility.ExitGUI();
+			EditorGUIUtility.ShowObjectPicker<Sprite>(sprite, false, "", id);
+			evt.Use();
+			GUIUtility.ExitGUI();
         }
+
         return sprite;
     }
 }

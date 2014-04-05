@@ -19,7 +19,7 @@ public static class PrefabExtension
 		}
 
 		if (updatePrefab) {
-			PrefabUtility.ReplacePrefab (prefabInstance, prefab);
+			PrefabUtility.ReplacePrefab (prefabInstance, prefab, ReplacePrefabOptions.ConnectToPrefab);
 		}
 	}
 

@@ -13,14 +13,20 @@ namespace ReferenceViewer
             if (!EditorApplication.SaveCurrentSceneIfUserWantsTo()) return;
 
             var currentScene = EditorApplication.currentScene;
+		
             var data = new Data();
 
             Generate.Build(AssetDatabase.GetAllAssetPaths(), assetData =>
             {
                 data.assetData.AddRange(assetData);
                 EditorUtility.UnloadUnusedAssets();
-                EditorApplication.OpenScene(currentScene);
-                Export(data);
+
+				if(string.IsNullOrEmpty(currentScene))
+					EditorApplication.NewScene();
+				else
+                	EditorApplication.OpenScene(currentScene);
+                
+				Export(data);
                 if (callback != null)
                     callback();
             });

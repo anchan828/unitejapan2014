@@ -24,7 +24,6 @@ public class PrefabDrawer : PropertyDrawer
 			if (prefab != null) {
 				PrefabType prefabType = PrefabUtility.GetPrefabType (prefab);
 
-
 				if (prefabType == PrefabType.PrefabInstance) {
 
 					prefab = PrefabUtility.GetPrefabParent (prefab) as GameObject;

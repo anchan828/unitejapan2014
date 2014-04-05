@@ -39,13 +39,7 @@ namespace Overwriter
             }
 
             EditorGUI.BeginChangeCheck();
-            var all = EditorGUILayout.ToggleLeft("すべての拡張子", overwriter.all);
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                overwriter.all = all;
-                UpdateExtensions();
-            }
+			overwriter.all = EditorGUILayout.ToggleLeft("すべての拡張子", overwriter.all);
 
             EditorGUI.BeginDisabledGroup(overwriter.all);
 
@@ -75,8 +69,13 @@ namespace Overwriter
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUI.EndDisabledGroup();
-        }
 
+			if (EditorGUI.EndChangeCheck())
+			{
+				UpdateExtensions();
+			}
+        }
+        
         private static void AddExtension()
         {
             if (!ex.extension.StartsWith("."))
@@ -161,6 +160,11 @@ namespace Overwriter
     {
         public string extension;
         public bool enabled = true;
+
+		public override string ToString ()
+		{
+			return string.Format ("[Extension] {0} , {1}",extension,enabled);
+		}
     }
     #endregion
     #region Importer
@@ -185,7 +189,8 @@ namespace Overwriter
 
                 var _assetPath = Regex.Replace(assetPath, pattern, ".$1");
                 File.Copy(assetPath, _assetPath, true);
-                AssetDatabase.DeleteAsset(assetPath);
+
+				AssetDatabase.DeleteAsset(assetPath);
                 AssetDatabase.ImportAsset(_assetPath, ImportAssetOptions.ForceUpdate);
             }
         }
