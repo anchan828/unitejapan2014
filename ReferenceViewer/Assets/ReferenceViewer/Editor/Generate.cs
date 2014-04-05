@@ -49,7 +49,8 @@ namespace ReferenceViewer
                     case ".prefab":
                         {
                             DisplayProgressBar(assetData.path, progress);
-                            var prefab = AssetDatabase.LoadAssetAtPath(assetPath, typeof(Object));
+                            var prefab = AssetDatabase.LoadAssetAtPath(assetPath, typeof(GameObject)) as GameObject;
+
                             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                             go.hideFlags = HideFlags.HideAndDontSave;
 
@@ -71,7 +72,7 @@ namespace ReferenceViewer
                         var animator =
                             (AnimatorController)
                                 AssetDatabase.LoadAssetAtPath(assetPath, typeof(AnimatorController));
-                        int layerCount = 0;
+                        var layerCount = 0;
                         if (isUnity41)
                         {
                             layerCount = (int)animator.GetType().GetMethod("GetLayerCount").Invoke(animator, new object[0]);
@@ -116,12 +117,27 @@ namespace ReferenceViewer
                             }
                         }
                         break;
+                    case ".mat":
+
+                        var material = AssetDatabase.LoadAssetAtPath(assetPath, typeof(Material)) as Material;
+
+                        AddAttachedAsset(material, material.shader, assetData, false);
+
+                        var propertyCount = ShaderUtil.GetPropertyCount(material.shader);
+
+                        for (var j = 0; j < propertyCount; j++)
+                        {
+                            if (ShaderUtil.GetPropertyType(material.shader, j) != ShaderUtil.ShaderPropertyType.TexEnv)
+                                continue;
+                            var propertyName = ShaderUtil.GetPropertyName(material.shader, j);
+                            AddAttachedAsset(material, material.GetTexture(propertyName), assetData, false);
+                        }
+                        break;
                     default:
                         SearchFieldAndProperty(AssetDatabase.LoadAssetAtPath(assetPath, typeof(Object)), assetData);
                         break;
                 }
                 ArrayUtility.Add(ref result, assetData);
-
             }
             callback(result);
             depths.Clear();
