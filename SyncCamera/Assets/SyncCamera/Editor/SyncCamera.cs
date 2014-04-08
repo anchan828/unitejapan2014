@@ -9,7 +9,6 @@ public class SyncCamera
 
 	static int selected = 0;
 	static Rect windowRect = new Rect (10, 20, 100, 24);
-	static bool dragging = false;
 
 	static SyncCamera ()
 	{
@@ -39,9 +38,6 @@ public class SyncCamera
 			Handles.EndGUI ();
 
 			int index = selected - 2;
-
-			Event evnt = Event.current;
-
 
 
 			if (index >= 0) {
