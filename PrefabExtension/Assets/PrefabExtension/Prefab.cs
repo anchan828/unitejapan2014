@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+#pragma warning disable 649
 [System.Serializable]
 public class Prefab
 {
