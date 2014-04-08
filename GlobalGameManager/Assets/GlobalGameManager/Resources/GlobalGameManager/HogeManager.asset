@@ -11,6 +11,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea35c68b5bd814860b0425d4f9087afd, type: 3}
   m_Name: HogeManager
   m_EditorClassIdentifier: 
-  globalInt: 0
-  globalString: 
-  globalTexture: {fileID: 0}
+  globalInt: 10
+  globalString: "\u8A2D\u5B9A"
+  globalTexture: {fileID: 2800000, guid: 2ac7079f0f16b44ee852ab72bdbcad30, type: 3}
