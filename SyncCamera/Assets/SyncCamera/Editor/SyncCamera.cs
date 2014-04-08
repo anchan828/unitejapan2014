@@ -9,10 +9,14 @@ public class SyncCamera
 
 	static int selected = 0;
 	static Rect windowRect = new Rect (10, 20, 100, 24);
+	static bool dragging = false;
 
 	static SyncCamera ()
 	{
 		SceneView.onSceneGUIDelegate += (sceneView) => {
+
+			if (SceneView.focusedWindow != sceneView)
+				return;
 
 			var cameras = Object.FindObjectsOfType<Camera> ();
 
@@ -25,7 +29,7 @@ public class SyncCamera
 			windowRect = GUILayout.Window (windowID, windowRect, (id) => {
 
 				string[] displayNames = new string[]{"None",""};
-				ArrayUtility.AddRange(ref displayNames,cameras.Select<Camera, string> (c => c.name).ToArray());
+				ArrayUtility.AddRange (ref displayNames, cameras.Select<Camera, string> (c => c.name).ToArray ());
 				selected = EditorGUILayout.Popup (selected, displayNames);
 
 				GUI.DragWindow ();
@@ -36,11 +40,14 @@ public class SyncCamera
 
 			int index = selected - 2;
 
+			Event evnt = Event.current;
+
+
+
 			if (index >= 0) {
 				var camera = cameras [index];
 				camera.transform.position = sceneView.camera.transform.position;
 				camera.transform.rotation = sceneView.camera.transform.rotation;
-
 			}
 
 		};
