@@ -9,7 +9,7 @@ public class PrefabDrawer : PropertyDrawer
 	{
 		Object obj = null;
 
-		var gameObjectProperty = property.FindPropertyRelative ("gameObject");
+		var gameObjectProperty = property.FindPropertyRelative ("_gameObject");
 
 		if (gameObjectProperty != null) {
 			obj = gameObjectProperty.objectReferenceValue;
